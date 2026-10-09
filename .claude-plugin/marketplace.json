@@ -1,0 +1,5 @@
+{
+  "name": "swiftui-preview",
+  "owner": { "name": "Vadym Dehterov" },
+  "plugins": [{ "name": "swiftui-preview", "source": "./" }]
+}
