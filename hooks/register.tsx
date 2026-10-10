@@ -20,8 +20,8 @@ async function measureCell($: EngineInterface) {
 
 // The snapshot padded to the pane box's aspect, kept for the renders that follow.
 let padded = { key: '', file: '' }
-async function pad($: EngineInterface, path: string, width: number, height: number) {
-  const key = `${path}@${width}x${height}`
+async function pad($: EngineInterface, path: string, generation: number, width: number, height: number) {
+  const key = `${path}@${generation}@${width}x${height}`
   if (padded.key !== key) {
     const file = path.replace(/\.png$/, ` ${width}x${height}.png`)
     const run = await $.process.run(['sips', '--padToHeightWidth', String(height), String(width), path, '--out', file]).catch(() => undefined)
@@ -77,7 +77,7 @@ export const register: Register = on => {
     if (!current) return <Text dimColor>No preview yet. Ask Claude to preview a view.</Text>
     const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1)
     const isPadded = fit.width !== current.width || fit.height !== current.height
-    const file = isPadded ? await pad($, current.path, fit.width, fit.height) : current.path
+    const file = isPadded ? await pad($, current.path, current.generation, fit.width, fit.height) : current.path
 
     return (
       <Box flexDirection="column">
