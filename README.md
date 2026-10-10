@@ -60,3 +60,7 @@ a toast says so; `/swiftui-preview` reopens the pane with the last render.
 claude plugin validate .
 claude plugin test .
 ```
+
+## License
+
+MIT
