@@ -80,7 +80,7 @@ export const register: Register = on => {
     const file = isPadded ? await pad($, current.path, current.generation, fit.width, fit.height) : current.path
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" alignItems="center">
         <Text dimColor wrap="truncate">{current.label}</Text>
         <Image
           source={{ file, format: 'png', generation: current.generation }}
