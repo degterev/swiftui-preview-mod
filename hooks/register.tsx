@@ -54,7 +54,7 @@ export const register: Register = on => {
       const size = parseSize((await $.process.run([...SIZE_ARGS, rendered.path])).stdout)
       if (!size) throw new Error(`no size for ${rendered.path}`)
       await measureCell($)
-      const label = [rendered.label, ...variantLabel(e)].join(' · ')
+      const label = [rendered.label, ...variantLabel(e)].filter(Boolean).join(' · ')
       await update($, shot, () => ({ ...rendered, ...size, label, generation: Date.now() }) satisfies Shot)
       // Opened unasked, the pane waits for a wide enough terminal: say where the preview is.
       const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
