@@ -52,7 +52,8 @@ export function fitImage(width: number, height: number, cell: Cell, columns: num
   const isCapped = Math.max(width, height) >= 1500
   const rowsPerColumn = (height / width) * (cell.width / cell.height)
   const natural = isCapped ? Infinity : width / 3 / cell.width
-  const c = clamp(Math.round(Math.min(natural, columns, rows / rowsPerColumn)))
+  // Floored to the pane, so the rows derived from it never exceed `rows`.
+  const c = clamp(Math.min(Math.round(natural), Math.floor(columns), Math.floor(rows / rowsPerColumn)))
 
   return { columns: c, rows: clamp(Math.round(c * rowsPerColumn)) }
 }

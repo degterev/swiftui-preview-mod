@@ -31,4 +31,6 @@ test('shows components 1:1 in points and fits whole screens, keeping the aspect'
   expect(fitImage(689, 1500, cell, 80, 50)).toEqual({ columns: 49, rows: 50 })
   // A narrow pane shrinks it, aspect kept.
   expect(fitImage(689, 1500, cell, 30, 50)).toEqual({ columns: 30, rows: 30 })
+  // A tall capped snapshot never takes more rows than the pane has.
+  expect(fitImage(400, 1500, cell, 80, 50).rows).toBeLessThanOrEqual(50)
 })
