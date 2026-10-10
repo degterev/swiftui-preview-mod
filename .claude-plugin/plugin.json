@@ -1,6 +1,6 @@
 {
   "name": "swiftui-preview",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Shows Xcode RenderPreview snapshots of SwiftUI previews in a Claude Code pane",
   "author": {
     "name": "Vadym Dehterov"
