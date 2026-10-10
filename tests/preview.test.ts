@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fitImage, parseRendered, pngSize } from '../hooks/lib'
+import { fitImage, parseRendered, parseSize } from '../hooks/lib'
 
 test('reads the snapshot path and label from RenderPreview', async () => {
   const text = JSON.stringify({
@@ -18,9 +18,10 @@ test('reads the snapshot path and label from RenderPreview', async () => {
   expect(parseRendered(undefined)).toBeUndefined()
 })
 
-test('reads PNG size from IHDR', async () => {
-  // The first 32 base64 chars of the 689×1500 Settings snapshot Xcode rendered.
-  expect(pngSize('iVBORw0KGgoAAAANSUhEUgAAArEAAAXc')).toEqual({ width: 689, height: 1500 })
+test('reads PNG size from sips', async () => {
+  const out = '/T/Settings.png\n  pixelWidth: 689\n  pixelHeight: 1500\n'
+  expect(parseSize(out)).toEqual({ width: 689, height: 1500 })
+  expect(parseSize('Error: file not found')).toBeUndefined()
 })
 
 test('shows components 1:1 in points and fits whole screens, keeping the aspect', async () => {

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
-import { CELL_SCRIPT, fitImage, parseRendered, pngSize } from './lib'
+import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize } from './lib'
 import type { Cell } from './lib'
 
 const PANE = 'swiftui-preview'
@@ -38,13 +38,14 @@ export const register: Register = on => {
     const rendered = parseRendered(ran.text)
     if (!rendered) return ran
     try {
-      const { base64 } = await $.fs.read(rendered.path, { as: 'bytes' })
-      const size = pngSize(base64)
+      const size = parseSize((await $.process.run([...SIZE_ARGS, rendered.path])).stdout)
+      if (!size) throw new Error(`no size for ${rendered.path}`)
       await measureCell($)
       await update($, shot, () => ({ ...rendered, ...size, generation: Date.now() }) satisfies Shot)
       await $.ui.open({ id: PANE, title: TITLE })
-    } catch {
-      // The pane is a bonus: never fail the model's call over it.
+    } catch (err) {
+      // The pane is a bonus: never fail the model's call over it, but say the pane is stale.
+      $.ui.toast(`SwiftUI Preview not updated: ${err instanceof Error ? err.message : String(err)}`)
     }
 
     return ran

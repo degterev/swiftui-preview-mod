@@ -19,12 +19,15 @@ export function parseRendered(text: string | undefined): Rendered | undefined {
   }
 }
 
-// Width and height from a base64 PNG's IHDR chunk (its first 24 bytes are 32 base64 chars).
-export function pngSize(base64: string): { width: number; height: number } {
-  const head = atob(base64.slice(0, 32))
-  const u32 = (at: number) => [0, 1, 2, 3].reduce((n, i) => n * 256 + head.charCodeAt(at + i), 0)
+// `sips -g pixelWidth -g pixelHeight <png>` reads only the header, whatever the file's size.
+export const SIZE_ARGS = ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight']
 
-  return { width: u32(16), height: u32(20) }
+// Width and height from SIZE_ARGS' output; undefined when it has none.
+export function parseSize(text: string): { width: number; height: number } | undefined {
+  const width = Number(/pixelWidth: (\d+)/.exec(text)?.[1])
+  const height = Number(/pixelHeight: (\d+)/.exec(text)?.[1])
+
+  return width && height ? { width, height } : undefined
 }
 
 const clamp = (n: number) => Math.max(1, Math.min(255, n))
