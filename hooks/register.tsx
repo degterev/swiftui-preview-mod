@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
-import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize } from './lib'
+import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize, variantLabel } from './lib'
 import type { Cell } from './lib'
 
 const PANE = 'swiftui-preview'
@@ -41,7 +41,8 @@ export const register: Register = on => {
       const size = parseSize((await $.process.run([...SIZE_ARGS, rendered.path])).stdout)
       if (!size) throw new Error(`no size for ${rendered.path}`)
       await measureCell($)
-      await update($, shot, () => ({ ...rendered, ...size, generation: Date.now() }) satisfies Shot)
+      const label = [rendered.label, ...variantLabel(e)].join(' · ')
+      await update($, shot, () => ({ ...rendered, ...size, label, generation: Date.now() }) satisfies Shot)
       // Opened unasked, the pane waits for a wide enough terminal: say where the preview is.
       const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
       if (!isPlaced) $.ui.toast('SwiftUI preview ready: /swiftui-preview to show it')

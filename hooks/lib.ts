@@ -19,6 +19,15 @@ export function parseRendered(text: string | undefined): Rendered | undefined {
   }
 }
 
+// The RenderPreview arguments that change the picture, for the label: `Dark Appearance · AX 3 · uk`.
+// Takes the whole `tool.call` input, whose type knows nothing of an MCP tool's arguments.
+export function variantLabel(input: object): string[] {
+  const args = input as { previewVariantOverrides?: Record<string, unknown>; previewLocalizationOverride?: unknown }
+
+  return [...Object.values(args.previewVariantOverrides ?? {}), args.previewLocalizationOverride]
+    .filter((v): v is string => typeof v === 'string' && v !== '')
+}
+
 // `sips -g ... <png>` reads only the header, whatever the file's size.
 export const SIZE_ARGS = ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'dpiWidth']
 

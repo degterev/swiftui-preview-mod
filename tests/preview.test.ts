@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fitImage, parseRendered, parseSize } from '../hooks/lib'
+import { fitImage, parseRendered, parseSize, variantLabel } from '../hooks/lib'
 
 test('reads the snapshot path and label from RenderPreview', async () => {
   const text = JSON.stringify({
@@ -38,4 +38,10 @@ test('shows components 1:1 in points and fits whole screens, keeping the aspect'
   expect(fitImage(600, 200, 2, cell, 80, 50).columns).toBe(38)
   // A tall capped snapshot never takes more rows than the pane has.
   expect(fitImage(400, 1500, 3, cell, 80, 50).rows).toBeLessThanOrEqual(50)
+})
+
+test('labels the variant and locale a render asked for', async () => {
+  expect(variantLabel({ previewVariantOverrides: { 'Color Scheme': 'Dark Appearance', 'Dynamic Type': 'AX 3' }, previewLocalizationOverride: 'uk' }))
+    .toEqual(['Dark Appearance', 'AX 3', 'uk'])
+  expect(variantLabel({})).toEqual([])
 })
