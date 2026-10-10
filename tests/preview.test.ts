@@ -22,7 +22,8 @@ test('reads PNG size from sips', async () => {
   const out = '/T/Settings.png\n  pixelWidth: 689\n  pixelHeight: 1500\n  dpiWidth: 216.000\n'
   expect(parseSize(out)).toEqual({ width: 689, height: 1500, scale: 3 })
   expect(parseSize('  pixelWidth: 600\n  pixelHeight: 200\n  dpiWidth: 144.000')?.scale).toBe(2)
-  expect(parseSize('  pixelWidth: 600\n  pixelHeight: 200')?.scale).toBe(3)
+  // sips reports an untagged PNG as 72 dpi.
+  expect(parseSize('  pixelWidth: 600\n  pixelHeight: 200\n  dpiWidth: 72.000')?.scale).toBe(3)
   expect(parseSize('Error: file not found')).toBeUndefined()
 })
 

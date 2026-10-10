@@ -32,11 +32,12 @@ export function variantLabel(input: object): string[] {
 export const SIZE_ARGS = ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'dpiWidth']
 
 // Width, height and pixels per point (Xcode tags @3x as 216 dpi, @2x as 144) from SIZE_ARGS'
-// output; @3x when untagged, undefined when it has no size.
+// output; @3x when untagged, which sips reports as 72 dpi; undefined when it has no size.
 export function parseSize(text: string): { width: number; height: number; scale: number } | undefined {
   const width = Number(/pixelWidth: (\d+)/.exec(text)?.[1])
   const height = Number(/pixelHeight: (\d+)/.exec(text)?.[1])
-  const scale = Math.round(Number(/dpiWidth: ([\d.]+)/.exec(text)?.[1] ?? 216) / 72) || 3
+  const dpi = Number(/dpiWidth: ([\d.]+)/.exec(text)?.[1])
+  const scale = dpi > 72 ? Math.round(dpi / 72) : 3
 
   return width && height ? { width, height, scale } : undefined
 }
