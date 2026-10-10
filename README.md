@@ -42,6 +42,13 @@ The pane opens with each render, labelled with the preview, device and variant
 (`Settings · iPhone 18 Pro · Dark Appearance`). When the terminal is too narrow to place it,
 a toast says so; `/swiftui-preview` reopens the pane with the last render.
 
+### Zoom
+
+`[ − ] [ 100% ] [ + ]` beside the label zoom from 50% to 400%; click the percentage to reset.
+With the pane focused (click it), `i` zooms in, `o` out, `0` resets. Zoomed in, the picture can
+outgrow the pane's height, which scrolls, but never its width. The terminal passes no pinch to
+apps, so a trackpad scrolls the pane but does not zoom it.
+
 ## How it sizes the picture
 
 - The terminal's cell size is measured, so a component takes its real size in points.
@@ -53,6 +60,7 @@ a toast says so; `/swiftui-preview` reopens the pane with the last render.
 - Assumes a Retina (2x) display: on a 1x monitor components show twice their size.
 - Xcode caps a snapshot's long side at 1500 px, so a whole screen in a very tall pane is slightly soft.
 - Only the last render is kept.
+- No horizontal panning: a whole screen zoomed past the pane's width stays at that width.
 
 ## Development
 
