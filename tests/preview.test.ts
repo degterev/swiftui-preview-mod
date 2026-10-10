@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fitImage, parseRendered, parseSize, variantLabel } from '../hooks/lib'
+import { fitImage, parseRendered, parseSize, stepZoom, variantLabel } from '../hooks/lib'
 
 test('reads the snapshot path and label from RenderPreview', async () => {
   const text = JSON.stringify({
@@ -49,4 +49,17 @@ test('labels the variant and locale a render asked for', async () => {
   expect(variantLabel({ previewVariantOverrides: { 'Color Scheme': 'Dark Appearance', 'Dynamic Type': 'AX 3' }, previewLocalizationOverride: 'uk' }))
     .toEqual(['Dark Appearance', 'AX 3', 'uk'])
   expect(variantLabel({})).toEqual([])
+})
+
+test('zooms in past the pane height but never its width', async () => {
+  const cell = { width: 8, height: 17.15 }
+  // Badge at 200%: 12 columns instead of 6.
+  expect(fitImage(146, 355, 3, cell, 80, 50, 2).columns).toBe(12)
+  // A whole screen at 150% takes 74 columns and 76 rows; the pane scrolls.
+  expect(fitImage(689, 1500, 3, cell, 80, 50, 1.5)).toMatchObject({ columns: 74, rows: 76 })
+  // At 50% it takes half the pane's 49 columns.
+  expect(fitImage(689, 1500, 3, cell, 80, 50, 0.5).columns).toBe(25)
+  // Never wider than the pane.
+  expect(fitImage(689, 1500, 3, cell, 60, 50, 4).columns).toBe(60)
+  expect([stepZoom(1, 1), stepZoom(1, -1), stepZoom(4, 1), stepZoom(0.5, -1)]).toEqual([1.5, 0.75, 4, 0.5])
 })

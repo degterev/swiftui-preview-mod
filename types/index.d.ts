@@ -10,6 +10,6 @@ export type Shot = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'swiftui-preview': { shot: Shot | null }
+    'swiftui-preview': { shot: Shot | null; zoom: number }
   }
 }

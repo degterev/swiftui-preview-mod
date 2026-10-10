@@ -2,12 +2,13 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
-import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize, variantLabel } from './lib'
+import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize, stepZoom, variantLabel } from './lib'
 import type { Cell } from './lib'
 
 const PANE = 'swiftui-preview'
 const TITLE = 'SwiftUI Preview'
 const shot = atom({ plugin: 'swiftui-preview', key: 'shot' } as const, null)
+const zoom = atom({ plugin: 'swiftui-preview', key: 'zoom' } as const, 1)
 
 // The terminal's cell in screen points; a guess until measured.
 let cell: Cell = { width: 8, height: 17 }
@@ -73,15 +74,21 @@ export const register: Register = on => {
       const { Text } = $.ui.resolve(e)
       return <Text>{current ? `Preview saved to ${current.path}` : 'No preview yet.'}</Text>
     }
-    const { Box, Text, Image } = $.ui.resolve(e)
+    const { Box, Button, Text, Image } = $.ui.resolve(e)
     if (!current) return <Text dimColor>No preview yet. Ask Claude to preview a view.</Text>
-    const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1)
+    const z = await read($, zoom)
+    const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1, z)
     const isPadded = fit.width !== current.width || fit.height !== current.height
     const file = isPadded ? await pad($, current.path, current.generation, fit.width, fit.height) : current.path
 
     return (
       <Box flexDirection="column" alignItems="center">
-        <Text dimColor wrap="truncate">{current.label}</Text>
+        <Box gap={1}>
+          <Text dimColor wrap="truncate">{current.label}</Text>
+          <Button hotkey="o" onPress={() => void update($, zoom, v => stepZoom(v, -1))}>−</Button>
+          <Button key="zoom" hotkey="0" onPress={() => void update($, zoom, () => 1)}>{`${z * 100}%`}</Button>
+          <Button hotkey="i" onPress={() => void update($, zoom, v => stepZoom(v, 1))}>+</Button>
+        </Box>
         <Image
           source={{ file, format: 'png', generation: current.generation }}
           columns={fit.columns}

@@ -59,19 +59,21 @@ rows, cols, x, y = struct.unpack('HHHH', fcntl.ioctl(os.open('/dev/' + tty, os.O
 print(x / cols, y / rows)
 `
 
-// The view's own size in points is pixels / scale, shown 1:1 in screen
-// points like Xcode's canvas at 100%, shrunk to fit the pane and never enlarged (that pixelates).
+// At 100% the view's own size in points is pixels / scale, shown 1:1 in screen points like
+// Xcode's canvas, shrunk to fit the pane and never enlarged (that pixelates).
 // ponytail: Xcode caps a snapshot's long side at 1500 px (a whole device screen), so a capped one
 // is only fit to the pane, enlarged on a tall one; read the real scale from the device model if that ever matters.
+// Zoomed in, the picture may outgrow the pane's height, which scrolls; never its width.
 // `Image` fills its columns×rows box, so `width`×`height` is the snapshot padded to the box's aspect.
-export function fitImage(width: number, height: number, scale: number, cell: Cell, columns: number, rows: number) {
+export function fitImage(width: number, height: number, scale: number, cell: Cell, columns: number, rows: number, zoom = 1) {
   const isCapped = Math.max(width, height) >= 1500
   const rowsPerColumn = (height / width) * (cell.width / cell.height)
-  const natural = isCapped ? Infinity : width / scale / cell.width
-  // Floored to the pane, so the rows derived from it never exceed `rows`.
-  const c = clamp(Math.min(Math.round(natural), Math.floor(columns), Math.floor(rows / rowsPerColumn)))
-  // Capped too: in floating point `c * rowsPerColumn` can land a hair above `rows`.
-  const r = clamp(Math.min(Math.ceil(c * rowsPerColumn), Math.floor(rows)))
+  const natural = isCapped ? Math.min(columns, rows / rowsPerColumn) : width / scale / cell.width
+  const maxRows = zoom > 1 ? 255 : rows
+  // Floored to the pane, so the rows derived from it never exceed `maxRows`.
+  const c = clamp(Math.min(Math.round(natural * zoom), Math.floor(columns), Math.floor(maxRows / rowsPerColumn)))
+  // Capped too: in floating point `c * rowsPerColumn` can land a hair above `maxRows`.
+  const r = clamp(Math.min(Math.ceil(c * rowsPerColumn), Math.floor(maxRows)))
   const aspect = (c * cell.width) / (r * cell.height)
 
   return {
@@ -80,4 +82,13 @@ export function fitImage(width: number, height: number, scale: number, cell: Cel
     width: Math.max(width, Math.round(height * aspect)),
     height: Math.max(height, Math.round(width / aspect)),
   }
+}
+
+export const ZOOMS = [0.5, 0.75, 1, 1.5, 2, 3, 4]
+
+// The next zoom step in or out from `zoom`, held at the ends.
+export function stepZoom(zoom: number, by: 1 | -1): number {
+  const next = by > 0 ? ZOOMS.find(z => z > zoom) : [...ZOOMS].reverse().find(z => z < zoom)
+
+  return next ?? zoom
 }
