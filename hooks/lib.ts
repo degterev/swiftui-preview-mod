@@ -19,15 +19,17 @@ export function parseRendered(text: string | undefined): Rendered | undefined {
   }
 }
 
-// `sips -g pixelWidth -g pixelHeight <png>` reads only the header, whatever the file's size.
-export const SIZE_ARGS = ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight']
+// `sips -g ... <png>` reads only the header, whatever the file's size.
+export const SIZE_ARGS = ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'dpiWidth']
 
-// Width and height from SIZE_ARGS' output; undefined when it has none.
-export function parseSize(text: string): { width: number; height: number } | undefined {
+// Width, height and pixels per point (Xcode tags @3x as 216 dpi, @2x as 144) from SIZE_ARGS'
+// output; @3x when untagged, undefined when it has no size.
+export function parseSize(text: string): { width: number; height: number; scale: number } | undefined {
   const width = Number(/pixelWidth: (\d+)/.exec(text)?.[1])
   const height = Number(/pixelHeight: (\d+)/.exec(text)?.[1])
+  const scale = Math.round(Number(/dpiWidth: ([\d.]+)/.exec(text)?.[1] ?? 216) / 72) || 3
 
-  return width && height ? { width, height } : undefined
+  return width && height ? { width, height, scale } : undefined
 }
 
 const clamp = (n: number) => Math.max(1, Math.min(255, n))
@@ -47,14 +49,14 @@ rows, cols, x, y = struct.unpack('HHHH', fcntl.ioctl(os.open('/dev/' + tty, os.O
 print(x / cols, y / rows)
 `
 
-// iOS snapshots are @3x, so the view's own size in points is pixels / 3, shown 1:1 in screen
+// The view's own size in points is pixels / scale, shown 1:1 in screen
 // points like Xcode's canvas at 100%, shrunk to fit the pane and never enlarged (that pixelates).
 // ponytail: Xcode caps a snapshot's long side at 1500 px (a whole device screen), so a capped one
 // is only fit to the pane; read the real scale from the device model if that ever matters.
-export function fitImage(width: number, height: number, cell: Cell, columns: number, rows: number) {
+export function fitImage(width: number, height: number, scale: number, cell: Cell, columns: number, rows: number) {
   const isCapped = Math.max(width, height) >= 1500
   const rowsPerColumn = (height / width) * (cell.width / cell.height)
-  const natural = isCapped ? Infinity : width / 3 / cell.width
+  const natural = isCapped ? Infinity : width / scale / cell.width
   // Floored to the pane, so the rows derived from it never exceed `rows`.
   const c = clamp(Math.min(Math.round(natural), Math.floor(columns), Math.floor(rows / rowsPerColumn)))
 

@@ -59,7 +59,7 @@ export const register: Register = on => {
     }
     const { Box, Text, Image } = $.ui.resolve(e)
     if (!current) return <Text dimColor>No preview yet. Ask Claude to preview a view.</Text>
-    const fit = fitImage(current.width, current.height, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1)
+    const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1)
 
     return (
       <Box flexDirection="column">
