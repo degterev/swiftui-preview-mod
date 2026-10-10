@@ -62,13 +62,21 @@ print(x / cols, y / rows)
 // The view's own size in points is pixels / scale, shown 1:1 in screen
 // points like Xcode's canvas at 100%, shrunk to fit the pane and never enlarged (that pixelates).
 // ponytail: Xcode caps a snapshot's long side at 1500 px (a whole device screen), so a capped one
-// is only fit to the pane; read the real scale from the device model if that ever matters.
+// is only fit to the pane, enlarged on a tall one; read the real scale from the device model if that ever matters.
+// `Image` fills its columns×rows box, so `width`×`height` is the snapshot padded to the box's aspect.
 export function fitImage(width: number, height: number, scale: number, cell: Cell, columns: number, rows: number) {
   const isCapped = Math.max(width, height) >= 1500
   const rowsPerColumn = (height / width) * (cell.width / cell.height)
   const natural = isCapped ? Infinity : width / scale / cell.width
   // Floored to the pane, so the rows derived from it never exceed `rows`.
   const c = clamp(Math.min(Math.round(natural), Math.floor(columns), Math.floor(rows / rowsPerColumn)))
+  const r = clamp(Math.ceil(c * rowsPerColumn))
+  const aspect = (c * cell.width) / (r * cell.height)
 
-  return { columns: c, rows: clamp(Math.round(c * rowsPerColumn)) }
+  return {
+    columns: c,
+    rows: r,
+    width: Math.max(width, Math.round(height * aspect)),
+    height: Math.max(height, Math.round(width / aspect)),
+  }
 }

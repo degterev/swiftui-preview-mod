@@ -18,6 +18,19 @@ async function measureCell($: EngineInterface) {
   if (x && y) cell = { width: x / 2, height: y / 2 }
 }
 
+// The snapshot padded to the pane box's aspect, kept for the renders that follow.
+let padded = { key: '', file: '' }
+async function pad($: EngineInterface, path: string, width: number, height: number) {
+  const key = `${path}@${width}x${height}`
+  if (padded.key !== key) {
+    const file = path.replace(/\.png$/, ` ${width}x${height}.png`)
+    const run = await $.process.run(['sips', '--padToHeightWidth', String(height), String(width), path, '--out', file]).catch(() => undefined)
+    padded = { key, file: run?.exitCode === 0 ? file : path }
+  }
+
+  return padded.file
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'swiftui-preview', description: 'Show the last SwiftUI preview' })
@@ -63,12 +76,14 @@ export const register: Register = on => {
     const { Box, Text, Image } = $.ui.resolve(e)
     if (!current) return <Text dimColor>No preview yet. Ask Claude to preview a view.</Text>
     const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1)
+    const isPadded = fit.width !== current.width || fit.height !== current.height
+    const file = isPadded ? await pad($, current.path, fit.width, fit.height) : current.path
 
     return (
       <Box flexDirection="column">
         <Text dimColor wrap="truncate">{current.label}</Text>
         <Image
-          source={{ file: current.path, format: 'png', generation: current.generation }}
+          source={{ file, format: 'png', generation: current.generation }}
           columns={fit.columns}
           rows={fit.rows}
           alt={`SwiftUI preview: ${current.path}`}

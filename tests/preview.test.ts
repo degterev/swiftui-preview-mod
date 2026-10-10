@@ -30,15 +30,17 @@ test('reads PNG size from sips', async () => {
 test('shows components 1:1 in points and fits whole screens, keeping the aspect', async () => {
   const cell = { width: 8, height: 17.15 } // 16×34.3 px cells on a 2x display
   // Badge, 146×355 px @3x = 49×118 pt: 6 columns, never enlarged to the pane's 80.
-  expect(fitImage(146, 355, 3, cell, 80, 50)).toEqual({ columns: 6, rows: 7 })
+  expect(fitImage(146, 355, 3, cell, 80, 50)).toMatchObject({ columns: 6, rows: 7 })
   // A capped 689×1500 device screen fills the pane's 50 rows.
-  expect(fitImage(689, 1500, 3, cell, 80, 50)).toEqual({ columns: 49, rows: 50 })
+  expect(fitImage(689, 1500, 3, cell, 80, 50)).toMatchObject({ columns: 49, rows: 50 })
   // A narrow pane shrinks it, aspect kept.
-  expect(fitImage(689, 1500, 3, cell, 30, 50)).toEqual({ columns: 30, rows: 30 })
+  expect(fitImage(689, 1500, 3, cell, 30, 50)).toMatchObject({ columns: 30, rows: 31 })
   // An iPad component, 600×200 px @2x = 300×100 pt: 38 columns.
   expect(fitImage(600, 200, 2, cell, 80, 50).columns).toBe(38)
   // A tall capped snapshot never takes more rows than the pane has.
   expect(fitImage(400, 1500, 3, cell, 80, 50).rows).toBeLessThanOrEqual(50)
+  // A 390×44 pt bar takes 3 rows (51 pt): padded to 1170×154 px, not stretched to fill them.
+  expect(fitImage(1170, 132, 3, cell, 80, 50)).toEqual({ columns: 49, rows: 3, width: 1170, height: 154 })
 })
 
 test('labels the variant and locale a render asked for', async () => {
