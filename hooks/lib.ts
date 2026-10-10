@@ -70,7 +70,8 @@ export function fitImage(width: number, height: number, scale: number, cell: Cel
   const natural = isCapped ? Infinity : width / scale / cell.width
   // Floored to the pane, so the rows derived from it never exceed `rows`.
   const c = clamp(Math.min(Math.round(natural), Math.floor(columns), Math.floor(rows / rowsPerColumn)))
-  const r = clamp(Math.ceil(c * rowsPerColumn))
+  // Capped too: in floating point `c * rowsPerColumn` can land a hair above `rows`.
+  const r = clamp(Math.min(Math.ceil(c * rowsPerColumn), Math.floor(rows)))
   const aspect = (c * cell.width) / (r * cell.height)
 
   return {

@@ -39,6 +39,8 @@ test('shows components 1:1 in points and fits whole screens, keeping the aspect'
   expect(fitImage(600, 200, 2, cell, 80, 50).columns).toBe(38)
   // A tall capped snapshot never takes more rows than the pane has.
   expect(fitImage(400, 1500, 3, cell, 80, 50).rows).toBeLessThanOrEqual(50)
+  // Nor when `c * rowsPerColumn` rounds a hair above the pane's rows.
+  expect(fitImage(660, 1500, 3, { width: 6, height: 15 }, 255, 30).rows).toBe(30)
   // A 390×44 pt bar takes 3 rows (51 pt): padded to 1170×154 px, not stretched to fill them.
   expect(fitImage(1170, 132, 3, cell, 80, 50)).toEqual({ columns: 49, rows: 3, width: 1170, height: 154 })
 })
