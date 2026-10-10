@@ -42,7 +42,9 @@ export const register: Register = on => {
       if (!size) throw new Error(`no size for ${rendered.path}`)
       await measureCell($)
       await update($, shot, () => ({ ...rendered, ...size, generation: Date.now() }) satisfies Shot)
-      await $.ui.open({ id: PANE, title: TITLE })
+      // Opened unasked, the pane waits for a wide enough terminal: say where the preview is.
+      const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
+      if (!isPlaced) $.ui.toast('SwiftUI preview ready: /swiftui-preview to show it')
     } catch (err) {
       // The pane is a bonus: never fail the model's call over it, but say the pane is stale.
       $.ui.toast(`SwiftUI Preview not updated: ${err instanceof Error ? err.message : String(err)}`)
