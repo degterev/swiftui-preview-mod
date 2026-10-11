@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fitImage, parseRendered, parseSize, stepZoom, variantLabel } from '../hooks/lib'
+import { fitImage, padTop, parseRendered, pngInfo, stepZoom, variantLabel } from '../hooks/lib'
 
 test('reads the snapshot path and label from RenderPreview', async () => {
   const text = JSON.stringify({
@@ -18,13 +18,52 @@ test('reads the snapshot path and label from RenderPreview', async () => {
   expect(parseRendered(undefined)).toBeUndefined()
 })
 
-test('reads PNG size from sips', async () => {
-  const out = '/T/Settings.png\n  pixelWidth: 689\n  pixelHeight: 1500\n  dpiWidth: 216.000\n'
-  expect(parseSize(out)).toEqual({ width: 689, height: 1500, scale: 3 })
-  expect(parseSize('  pixelWidth: 600\n  pixelHeight: 200\n  dpiWidth: 144.000')?.scale).toBe(2)
-  // sips reports an untagged PNG as 72 dpi.
-  expect(parseSize('  pixelWidth: 600\n  pixelHeight: 200\n  dpiWidth: 72.000')?.scale).toBe(3)
-  expect(parseSize('Error: file not found')).toBeUndefined()
+function adler32(bytes: number[]) {
+  let a = 1
+  let b = 0
+  for (const x of bytes) (a = (a + x) % 65521), (b = (b + a) % 65521)
+
+  return b * 65536 + a
+}
+
+// A 2×1 RGBA PNG: an opaque red pixel and a transparent one, its rows in a stored deflate block.
+function tinyPng(dpi?: number) {
+  const raw = [0, 255, 0, 0, 255, 0, 0, 0, 0]
+  const be = (n: number) => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]
+  const chunk = (type: string, data: number[]) => [...be(data.length), ...[...type].map(c => c.charCodeAt(0)), ...data, 0, 0, 0, 0]
+  const ppm = dpi ? Math.round(dpi / 0.0254) : 0
+
+  return Uint8Array.from([
+    137, 80, 78, 71, 13, 10, 26, 10,
+    ...chunk('IHDR', [...be(2), ...be(1), 8, 6, 0, 0, 0]),
+    ...(dpi ? chunk('pHYs', [...be(ppm), ...be(ppm), 1]) : []),
+    ...chunk('IDAT', [0x78, 0x01, 1, raw.length, 0, raw.length ^ 0xffff, 0xff, ...raw, ...be(adler32(raw))]),
+    ...chunk('IEND', []),
+  ])
+}
+
+test('reads PNG size and scale', async () => {
+  expect(pngInfo(tinyPng(216))).toEqual({ width: 2, height: 1, scale: 3 })
+  expect(pngInfo(tinyPng(144))?.scale).toBe(2)
+  expect(pngInfo(tinyPng(72))?.scale).toBe(3)
+  expect(pngInfo(tinyPng())?.scale).toBe(3)
+  expect(pngInfo(new TextEncoder().encode('Error: file not found'))).toBeUndefined()
+})
+
+test('pads a PNG with transparent rows on top', async () => {
+  const png = padTop(tinyPng(216), 2)!
+  expect(pngInfo(png)).toEqual({ width: 2, height: 3, scale: 3 })
+  // Every block is stored, so the rows are read straight out of them.
+  const view = new DataView(png.buffer)
+  const at = png.findIndex((_, i) => String.fromCharCode(...png.subarray(i, i + 4)) === 'IDAT') + 4
+  const rows: number[] = []
+  let i = at + 2
+  for (let isFinal = false; !isFinal; i += 5 + view.getUint16(i + 1, true)) {
+    isFinal = (png[i]! & 1) === 1
+    rows.push(...png.subarray(i + 5, i + 5 + view.getUint16(i + 1, true)))
+  }
+  expect(rows).toEqual([...new Array(18).fill(0), 0, 255, 0, 0, 255, 0, 0, 0, 0])
+  expect(view.getUint32(i)).toBe(adler32(rows))
 })
 
 test('shows components 1:1 in points and fits whole screens, keeping the aspect', async () => {
@@ -41,8 +80,8 @@ test('shows components 1:1 in points and fits whole screens, keeping the aspect'
   expect(fitImage(400, 1500, 3, cell, 80, 50).rows).toBeLessThanOrEqual(50)
   // Nor when `c * rowsPerColumn` rounds a hair above the pane's rows.
   expect(fitImage(660, 1500, 3, { width: 6, height: 15 }, 255, 30).rows).toBe(30)
-  // A 390×44 pt bar takes 3 rows (51 pt): padded to 1170×154 px, not stretched to fill them.
-  expect(fitImage(1170, 132, 3, cell, 80, 50)).toEqual({ columns: 49, rows: 3, width: 1170, height: 154 })
+  // A 390×44 pt bar takes 3 rows (51 pt): padded to 154 px tall, not stretched to fill them.
+  expect(fitImage(1170, 132, 3, cell, 80, 50)).toEqual({ columns: 49, rows: 3, height: 154 })
 })
 
 test('labels the variant and locale a render asked for', async () => {

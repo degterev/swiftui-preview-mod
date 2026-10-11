@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
-import { CELL_SCRIPT, SIZE_ARGS, fitImage, parseRendered, parseSize, stepZoom, variantLabel } from './lib'
+import { CELL_SCRIPT, fitImage, fromBase64, padTop, parseRendered, pngInfo, stepZoom, toBase64, variantLabel } from './lib'
 import type { Cell } from './lib'
 
 const PANE = 'swiftui-preview'
@@ -19,17 +19,18 @@ async function measureCell($: EngineInterface) {
   if (x && y) cell = { width: x / 2, height: y / 2 }
 }
 
-// The snapshot padded to the pane box's aspect, kept for the renders that follow.
-let padded = { key: '', file: '' }
-async function pad($: EngineInterface, path: string, generation: number, width: number, height: number) {
-  const key = `${path}@${generation}@${width}x${height}`
+// The snapshot with rows on top to fill the pane box, base64, kept for the renders that follow.
+let padded: { key: string; png?: string } = { key: '' }
+async function pad($: EngineInterface, current: Shot, rows: number) {
+  const key = `${current.path}@${current.generation}+${rows}`
   if (padded.key !== key) {
-    const file = path.replace(/\.png$/, ` ${width}x${height}.png`)
-    const run = await $.process.run(['sips', '--padToHeightWidth', String(height), String(width), path, '--out', file]).catch(() => undefined)
-    padded = { key, file: run?.exitCode === 0 ? file : path }
+    const read = await $.fs.read(current.path, { as: 'bytes' }).catch(() => undefined)
+    const png = read && padTop(fromBase64(read.base64), rows)
+    // `{ png }` takes at most 2 MiB; past it, or unpadded, the box stretches the snapshot a little.
+    padded = { key, png: png && png.length <= 2 * 1024 * 1024 ? toBase64(png) : undefined }
   }
 
-  return padded.file
+  return padded.png
 }
 
 export const register: Register = on => {
@@ -52,8 +53,8 @@ export const register: Register = on => {
     const rendered = parseRendered(ran.text)
     if (!rendered) return ran
     try {
-      const size = parseSize((await $.process.run([...SIZE_ARGS, rendered.path])).stdout)
-      if (!size) throw new Error(`no size for ${rendered.path}`)
+      const size = pngInfo(fromBase64((await $.fs.read(rendered.path, { as: 'bytes' })).base64))
+      if (!size) throw new Error(`no PNG at ${rendered.path}`)
       await measureCell($)
       const label = [rendered.label, ...variantLabel(e)].filter(Boolean).join(' · ')
       await update($, shot, () => ({ ...rendered, ...size, label, generation: Date.now() }) satisfies Shot)
@@ -78,8 +79,7 @@ export const register: Register = on => {
     if (!current) return <Text dimColor>No preview yet. Ask Claude to preview a view.</Text>
     const z = await read($, zoom)
     const fit = fitImage(current.width, current.height, current.scale, cell, e.props.bodyColumns, e.props.scroll.bodyRows - 1, z)
-    const isPadded = fit.width !== current.width || fit.height !== current.height
-    const file = isPadded ? await pad($, current.path, current.generation, fit.width, fit.height) : current.path
+    const png = fit.height > current.height ? await pad($, current, fit.height - current.height) : undefined
 
     return (
       <Box flexDirection="column" alignItems="center">
@@ -90,7 +90,7 @@ export const register: Register = on => {
           <Button hotkey="i" onPress={() => void update($, zoom, v => stepZoom(v, 1))}>+</Button>
         </Box>
         <Image
-          source={{ file, format: 'png', generation: current.generation }}
+          source={png ? { png } : { file: current.path, format: 'png', generation: current.generation }}
           columns={fit.columns}
           rows={fit.rows}
           alt={`SwiftUI preview: ${current.path}`}
