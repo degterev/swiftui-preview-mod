@@ -55,6 +55,14 @@ apps, so a trackpad scrolls the pane but does not zoom it.
 - Components are never enlarged; whole-device screens fit the pane's height.
 - The snapshot is padded to the pane's cell grid, so it is never stretched.
 
+## Permissions
+
+- **Runs one command:** `python3` (with `ps`), once per render, through `$.process`, to measure the
+  terminal's cell in pixels so a view shows at its real size. Claude Code's SDK has no other way to
+  learn it.
+- **Reads the snapshot** Xcode wrote, through `$.fs`, and pads it in memory; writes no files.
+- **No network.** Xcode MCP is the server you add yourself, not part of the mod.
+
 ## Limitations
 
 - Assumes a Retina (2x) display: on a 1x monitor components show twice their size.
